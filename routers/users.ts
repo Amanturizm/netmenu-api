@@ -2,12 +2,17 @@ import express from 'express';
 import mongoose, { HydratedDocument } from 'mongoose';
 import bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import auth, { RequestWithUser } from '../middleware/auth';
 import User, { IUserMethods } from '../models/User';
 import config from '../config';
-import nodemailer from 'nodemailer';
 
 const usersRouter = express.Router();
+
+usersRouter.get('/', async (_, res) => {
+  const users = await User.find();
+  return res.send(users);
+});
 
 usersRouter.post('/', async (req, res, next) => {
   try {
@@ -67,6 +72,10 @@ usersRouter.post('/password-reset', async (req, res, next) => {
     const user = (await User.findOne({
       email: req.body.email,
     })) as HydratedDocument<IUserMethods>;
+
+    if (!user) {
+      return res.status(404).send({ error: 'This email not found!' });
+    }
 
     const generatedPassword = crypto
       .randomBytes(8)

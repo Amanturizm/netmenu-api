@@ -23,3 +23,5 @@ app.get('*', (_, res) => res.sendStatus(404));
     mongoose.disconnect();
   });
 })().catch((e) => console.error(e));
+
+export default app;
