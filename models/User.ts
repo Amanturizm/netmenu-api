@@ -12,16 +12,15 @@ export interface IUserMethods extends IUser {
 type UserModel = Model<IUser, object, IUserMethods>;
 
 const UserSchema = new Schema<IUser, UserModel, IUserMethods>({
-  username: {
+  email: {
     type: String,
+    required: true,
+    unique: true,
     validate: {
-      validator: async function (
-        this: HydratedDocument<IUser>,
-        username: string,
-      ): Promise<boolean> {
-        if (!this.isModified('username')) return true;
+      validator: async function (this: HydratedDocument<IUser>, email: string): Promise<boolean> {
+        if (!this.isModified('email')) return true;
         const user: HydratedDocument<IUser> | null = await User.findOne({
-          username,
+          email,
         });
         return !user;
       },
@@ -35,6 +34,9 @@ const UserSchema = new Schema<IUser, UserModel, IUserMethods>({
   token: {
     type: String,
     required: true,
+  },
+  username: {
+    type: String,
   },
 });
 

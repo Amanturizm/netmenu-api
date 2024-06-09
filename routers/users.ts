@@ -1,8 +1,11 @@
 import express from 'express';
 import mongoose, { HydratedDocument } from 'mongoose';
 import bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import auth, { RequestWithUser } from '../middleware/auth';
 import User, { IUserMethods } from '../models/User';
+import config from '../config';
+import nodemailer from 'nodemailer';
 
 const usersRouter = express.Router();
 
@@ -33,15 +36,12 @@ usersRouter.post('/sessions', async (req, res, next) => {
     }
 
     const user = (await User.findOne({
-      username: req.body.email,
+      email: req.body.email,
     })) as HydratedDocument<IUserMethods>;
 
     if (!user) {
       return res.status(400).send({ error: 'Wrong username or password!' });
     }
-
-    // ToDo: Removed
-    console.log(user);
 
     const isMatch = await bcrypt.compare(req.body.password, user.password);
 
@@ -52,7 +52,54 @@ usersRouter.post('/sessions', async (req, res, next) => {
     user.generateToken();
     await user.save();
 
-    return res.send({ message: 'Username and password correct!', user });
+    return res.send(user);
+  } catch (e) {
+    return next(e);
+  }
+});
+
+usersRouter.post('/password-reset', async (req, res, next) => {
+  try {
+    if (!req.body.email) {
+      return res.status(400).send({ error: 'email field is required!' });
+    }
+
+    const user = (await User.findOne({
+      email: req.body.email,
+    })) as HydratedDocument<IUserMethods>;
+
+    const generatedPassword = crypto
+      .randomBytes(8)
+      .toString('base64')
+      .slice(0, 8)
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    user.password = generatedPassword;
+
+    user.generateToken();
+    await user.save();
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: config.auth,
+    });
+
+    transporter.sendMail(
+      {
+        from: `Netmenu <${config.auth.user}>`,
+        to: user.email,
+        subject: 'QR Netmenu',
+        text: 'Ваш новый пароль: ' + generatedPassword,
+      },
+      (err) => {
+        if (err) {
+          console.log(err.message);
+          throw new Error(err.message);
+        }
+      },
+    );
+
+    return res.sendStatus(204);
   } catch (e) {
     return next(e);
   }
@@ -66,7 +113,7 @@ usersRouter.delete('/sessions', auth, async (req, res, next) => {
 
     user.generateToken();
     await user.save();
-    return res.send({ message: 'User token changed!' });
+    return res.sendStatus(204);
   } catch (e) {
     return next(e);
   }
