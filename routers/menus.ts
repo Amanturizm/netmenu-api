@@ -1,9 +1,12 @@
+import path from 'path';
+import * as fs from 'fs';
 import express from 'express';
 import mongoose, { HydratedDocument } from 'mongoose';
 import auth, { RequestWithUser } from '../middleware/auth';
-import { IMenu } from '../types';
 import { filesUpload } from '../multer';
+import config from '../config';
 import Menu from '../models/Menu';
+import { IMenu, TObjectId } from '../types';
 
 const menusRouter = express.Router();
 
@@ -74,13 +77,24 @@ menusRouter.patch('/:id', auth, filesUpload.single('image'), async (req, res, ne
       updatedData.image = file.filename.split('.').pop() + '/' + file.filename;
     }
 
-    const menu = await Menu.findByIdAndUpdate(menuId, updatedData, { new: true });
+    const menu = await Menu.findById(menuId);
 
     if (!menu) {
       return res.sendStatus(404).send({ error: 'This menu not found!' });
     }
 
+    const prevImage = menu.image;
+
+    const keys = Object.keys(updatedData) as Array<keyof IMenu>;
+    keys.forEach((key) => {
+      menu[key] = updatedData[key] as TObjectId & string;
+    });
+
     await menu.save();
+
+    if (prevImage) {
+      fs.unlink(path.join(config.publicPath, prevImage), () => null);
+    }
 
     return res.send(updatedData);
   } catch (e) {
@@ -107,7 +121,13 @@ menusRouter.delete('/:id', auth, async (req, res, next) => {
       return res.status(400).send('This menu does not apply to this user ' + `(${user.username})`);
     }
 
+    const image = menu.image;
+
     await menu.deleteOne();
+
+    if (image) {
+      fs.unlink(path.join(config.publicPath, image), () => null);
+    }
 
     return res.sendStatus(204);
   } catch (e) {
