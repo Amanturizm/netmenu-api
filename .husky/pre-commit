@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# ESLint check before commit
+pnpm lint
+
+# Prettier check before commit
+pnpm format:check
