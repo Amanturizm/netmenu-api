@@ -63,7 +63,7 @@ menusRouter.post('/', auth, filesUpload.single('image'), async (req, res, next) 
   }
 });
 
-menusRouter.patch('/:id', auth, filesUpload.single('image'), async (req, res, next) => {
+menusRouter.patch('/:id', auth, async (req, res, next) => {
   try {
     const menuId = req.params.id;
     const body = req.body as IMenu;
