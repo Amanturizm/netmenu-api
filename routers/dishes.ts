@@ -1,7 +1,7 @@
 import express from 'express';
 import Dish from '../models/Dish';
 import auth from '../middleware/auth';
-import { filesUpload } from '../multer';
+import { filesUpload } from '../s3';
 import { IDish, IMenu } from '../types';
 import mongoose from 'mongoose';
 
@@ -19,22 +19,22 @@ dishesRouter.get('/:categoryId', auth, async (req, res) => {
   }
 });
 
-dishesRouter.post('/:categoryId', auth, filesUpload.single('image'), async (req, res, next) => {
+dishesRouter.post('/', auth, filesUpload.single('image'), async (req, res, next) => {
   try {
-    const categoryId = req.params.categoryId;
     const body = req.body as IDish;
-    const file = req.file;
+    const file = req.file as (File & { key: string }) | undefined;
 
     const dish = await Dish.create({
-      category: categoryId,
+      category: body.category,
       name: body.name,
-      image: file ? file.filename.split('.').pop() + '/' + file.filename : null,
       weight: body.weight,
-      description: body.description,
-      preparationTime: body.preparationTime,
-      calories: body.calories,
       price: body.price,
-      newPrice: body.newPrice,
+      oldPrice: body.oldPrice || null,
+      calories: body.calories,
+      proteinAndFatAndCarbohydrates: body.proteinAndFatAndCarbohydrates,
+      preparationTime: body.preparationTime,
+      description: body.description,
+      image: file ? file.key : null,
     });
 
     await dish.save();
@@ -53,14 +53,14 @@ dishesRouter.put('/:id', auth, filesUpload.single('image'), async (req, res, nex
   try {
     const dishId = req.params.id;
     const body = req.body as IMenu;
-    const file = req.file;
+    const file = req.file as (File & { key: string }) | undefined;
 
     const updatedData = {
       ...body,
     };
 
     if (file) {
-      updatedData.image = file.filename.split('.').pop() + '/' + file.filename;
+      updatedData.image = file.key;
     }
 
     const dish = await Dish.findByIdAndUpdate(dishId, updatedData, { new: true });

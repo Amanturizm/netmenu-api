@@ -9,11 +9,6 @@ import config from '../config';
 
 const usersRouter = express.Router();
 
-usersRouter.get('/', async (_, res) => {
-  const users = await User.find();
-  return res.send(users);
-});
-
 usersRouter.post('/', async (req, res, next) => {
   try {
     const user = new User({

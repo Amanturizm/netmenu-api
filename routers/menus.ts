@@ -1,10 +1,7 @@
-import path from 'path';
-import * as fs from 'fs';
 import express from 'express';
 import mongoose, { HydratedDocument } from 'mongoose';
 import auth, { RequestWithUser } from '../middleware/auth';
-import { filesUpload } from '../multer';
-import config from '../config';
+import { deletePrevImage, filesUpload } from '../s3';
 import Menu from '../models/Menu';
 import { IMenu, TObjectId } from '../types';
 
@@ -63,18 +60,18 @@ menusRouter.post('/', auth, filesUpload.single('image'), async (req, res, next) 
   }
 });
 
-menusRouter.patch('/:id', auth, async (req, res, next) => {
+menusRouter.patch('/:id', auth, filesUpload.single('image'), async (req, res, next) => {
   try {
     const menuId = req.params.id;
     const body = req.body as IMenu;
-    const file = req.file;
+    const file = req.file as (File & { key: string }) | undefined;
 
     const updatedData = {
       ...body,
     };
 
     if (file) {
-      updatedData.image = file.filename.split('.').pop() + '/' + file.filename;
+      updatedData.image = file.key;
     }
 
     const menu = await Menu.findById(menuId);
@@ -92,8 +89,8 @@ menusRouter.patch('/:id', auth, async (req, res, next) => {
 
     await menu.save();
 
-    if (prevImage) {
-      fs.unlink(path.join(config.publicPath, prevImage), () => null);
+    if (file && prevImage) {
+      await deletePrevImage(prevImage);
     }
 
     return res.send(updatedData);
@@ -126,7 +123,7 @@ menusRouter.delete('/:id', auth, async (req, res, next) => {
     await menu.deleteOne();
 
     if (image) {
-      fs.unlink(path.join(config.publicPath, image), () => null);
+      await deletePrevImage(image);
     }
 
     return res.sendStatus(204);

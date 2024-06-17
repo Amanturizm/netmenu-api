@@ -1,25 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
-import { ICalories, IDish, TObjectId } from '../types';
+import { IDish, TObjectId } from '../types';
 import Category from './Category';
-
-const CaloriesSchema = new Schema<ICalories>({
-  total: {
-    type: Number,
-    required: true,
-  },
-  protein: {
-    type: Number,
-    required: true,
-  },
-  fat: {
-    type: Number,
-    required: true,
-  },
-  carbohydrates: {
-    type: Number,
-    required: true,
-  },
-});
 
 const DishSchema = new Schema<IDish>({
   category: {
@@ -35,14 +16,23 @@ const DishSchema = new Schema<IDish>({
     type: String,
     required: true,
   },
-  image: {
-    type: String,
-  },
   weight: {
-    type: String,
+    type: Number,
     required: true,
   },
-  description: {
+  price: {
+    type: Number,
+    required: true,
+  },
+  oldPrice: {
+    type: Number,
+    default: null,
+  },
+  calories: {
+    type: Number,
+    required: true,
+  },
+  proteinAndFatAndCarbohydrates: {
     type: String,
     required: true,
   },
@@ -50,16 +40,13 @@ const DishSchema = new Schema<IDish>({
     type: Number,
     required: true,
   },
-  calories: {
-    type: CaloriesSchema,
+  description: {
+    type: String,
     required: true,
   },
-  price: {
-    type: Number,
+  image: {
+    type: String,
     required: true,
-  },
-  newPrice: {
-    type: Number,
   },
 });
 

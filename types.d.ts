@@ -32,18 +32,12 @@ export interface IDish {
   _id?: TObjectId;
   category: TObjectId;
   name: string;
-  image: string;
-  weight: string;
-  description: string;
-  preparationTime: number;
-  calories: ICalories;
+  weight: number;
   price: number;
-  newPrice: number | null;
-}
-
-interface ICalories {
-  total: number;
-  protein: number;
-  fat: number;
-  carbohydrates: number;
+  oldPrice: number | null;
+  calories: number;
+  proteinAndFatAndCarbohydrates: string;
+  preparationTime: number;
+  description: string;
+  image: string;
 }
