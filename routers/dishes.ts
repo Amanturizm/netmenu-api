@@ -4,8 +4,33 @@ import auth from '../middleware/auth';
 import { filesUpload } from '../s3';
 import { IDish, IMenu } from '../types';
 import mongoose from 'mongoose';
+import Category from '../models/Category';
 
 const dishesRouter = express.Router();
+
+dishesRouter.get('/search/:menu_id', auth, async (req, res) => {
+  try {
+    const menu_id = req.params.menu_id as string;
+    const query = req.query.query as string;
+
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+
+    const categories = await Category.find({ menu: menu_id }).select('_id');
+    const categoryIds = categories.map((category) => category._id);
+
+    const dishes = await Dish.find({
+      category: { $in: categoryIds },
+      name: { $regex: query, $options: 'i' },
+    });
+
+    return res.send(dishes);
+  } catch (e) {
+    console.log(e);
+    return res.sendStatus(500);
+  }
+});
 
 dishesRouter.get('/:categoryId', auth, async (req, res) => {
   try {
