@@ -37,6 +37,11 @@ const UserSchema = new Schema<IUser, UserModel, IUserMethods>({
   },
   username: {
     type: String,
+    default: null,
+  },
+  adImage: {
+    type: String,
+    default: null,
   },
 });
 

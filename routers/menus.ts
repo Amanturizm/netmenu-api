@@ -4,6 +4,7 @@ import auth, { RequestWithUser } from '../middleware/auth';
 import { deletePrevImage, filesUpload } from '../s3';
 import Menu from '../models/Menu';
 import { IMenu, TObjectId } from '../types';
+import Category from '../models/Category';
 
 const menusRouter = express.Router();
 
@@ -11,7 +12,7 @@ menusRouter.get('/', auth, async (req, res) => {
   try {
     const user = (req as RequestWithUser).user;
 
-    const menus = await Menu.find({ user: user._id }).select('name image');
+    const menus = await Menu.find({ user: user._id }).select('name image').lean();
 
     return res.send(menus);
   } catch {
@@ -21,7 +22,7 @@ menusRouter.get('/', auth, async (req, res) => {
 
 menusRouter.get('/:id', auth, async (req, res) => {
   try {
-    const menu = await Menu.findById(req.params.id);
+    const menu = await Menu.findById(req.params.id).lean();
 
     if (!menu) {
       return res.status(404).send('No menu found with id ' + req.params.id);
@@ -120,6 +121,7 @@ menusRouter.delete('/:id', auth, async (req, res, next) => {
 
     const image = menu.image;
 
+    await Category.deleteMany({ menu: menu._id });
     await menu.deleteOne();
 
     if (image) {

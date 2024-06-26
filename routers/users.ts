@@ -6,6 +6,7 @@ import nodemailer from 'nodemailer';
 import auth, { RequestWithUser } from '../middleware/auth';
 import User, { IUserMethods } from '../models/User';
 import config from '../config';
+import { deletePrevImage, filesUpload } from '../s3';
 
 const usersRouter = express.Router();
 
@@ -14,7 +15,7 @@ usersRouter.post('/', async (req, res, next) => {
     const user = new User({
       email: req.body.email,
       password: req.body.password,
-    });
+    }) as HydratedDocument<IUserMethods>;
 
     user.generateToken();
 
@@ -53,6 +54,18 @@ usersRouter.post('/sessions', async (req, res, next) => {
     await user.save();
 
     return res.send(user);
+  } catch (e) {
+    return next(e);
+  }
+});
+
+usersRouter.delete('/sessions', auth, async (req, res, next) => {
+  try {
+    const user = (req as RequestWithUser).user as HydratedDocument<IUserMethods>;
+
+    user.generateToken();
+    await user.save();
+    return res.sendStatus(204);
   } catch (e) {
     return next(e);
   }
@@ -109,15 +122,35 @@ usersRouter.post('/password-reset', async (req, res, next) => {
   }
 });
 
-usersRouter.delete('/sessions', auth, async (req, res, next) => {
+usersRouter.patch('/', auth, filesUpload.single('adImage'), async (req, res, next) => {
   try {
-    const { _id } = (req as RequestWithUser).user;
+    const user = (req as RequestWithUser).user as HydratedDocument<IUserMethods>;
 
-    const user = (await User.findById(_id)) as HydratedDocument<IUserMethods>;
+    const username = req.body.username ?? user.username;
+    const email = req.body.email || user.email;
+
+    user.username = username;
+    user.email = email;
+
+    const newPassword = req.body.newPassword;
+
+    if (newPassword && newPassword.length > 8) {
+      user.password = newPassword;
+    }
+
+    const file = req.file as (File & { key: string }) | undefined;
+
+    if (file || (req.body.adImage && req.body.adImage === 'delete')) {
+      if (user.adImage) {
+        void deletePrevImage(user.adImage);
+      }
+      user.adImage = req.body.adImage ? null : file ? file.key : null;
+    }
 
     user.generateToken();
     await user.save();
-    return res.sendStatus(204);
+
+    return res.send(user);
   } catch (e) {
     return next(e);
   }

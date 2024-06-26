@@ -4,10 +4,11 @@ export type TObjectId = mongoose.Schema.Types.ObjectId;
 
 export interface IUser {
   _id?: TObjectId;
-  username?: string;
   email: string;
   password: string;
   token: string;
+  username: string | null;
+  adImage: string | null;
 }
 
 export interface IMenu {

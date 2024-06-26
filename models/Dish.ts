@@ -1,6 +1,7 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { CallbackError, Schema } from 'mongoose';
 import { IDish, TObjectId } from '../types';
 import Category from './Category';
+import { deletePrevImage } from '../s3';
 
 const DishSchema = new Schema<IDish>({
   category: {
@@ -48,6 +49,19 @@ const DishSchema = new Schema<IDish>({
     type: String,
     required: true,
   },
+});
+
+DishSchema.pre('deleteMany', async function (next) {
+  try {
+    const conditions = (this as unknown as { _conditions: { category: TObjectId } })._conditions;
+    const dishes = (await Dish.find(conditions).lean()) as IDish[];
+    dishes.forEach((dish) => {
+      deletePrevImage(dish.image);
+    });
+    next();
+  } catch (e) {
+    next(e as CallbackError);
+  }
 });
 
 const Dish = mongoose.model('Dish', DishSchema);
