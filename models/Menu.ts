@@ -27,6 +27,9 @@ const MenuSchema = new Schema<IMenu>({
   wifiPassword: {
     type: String,
   },
+  qrCodeImage: {
+    type: String,
+  },
 });
 
 const Menu = mongoose.model('Menu', MenuSchema);

@@ -1,7 +1,7 @@
 import express from 'express';
 import mongoose, { HydratedDocument } from 'mongoose';
 import auth, { RequestWithUser } from '../middleware/auth';
-import { deletePrevImage, filesUpload } from '../s3';
+import { deletePrevImage, filesUpload, saveQRCode } from '../s3';
 import Menu from '../models/Menu';
 import { IMenu, TObjectId } from '../types';
 import Category from '../models/Category';
@@ -49,6 +49,12 @@ menusRouter.post('/', auth, filesUpload.single('image'), async (req, res, next) 
       wifiPassword: body.wifiPassword || '',
     })) as HydratedDocument<IMenu>;
 
+    const qrCode = await saveQRCode(`https://www.netmenu.kz/menu/${menu._id}?groupName=Еда`);
+
+    if (qrCode.key) {
+      menu.qrCodeImage = qrCode.key;
+    }
+
     await menu.save();
 
     return res.status(201).send(menu);
@@ -75,7 +81,7 @@ menusRouter.patch('/:id', auth, filesUpload.single('image'), async (req, res, ne
       updatedData.image = file.key;
     }
 
-    const menu = await Menu.findById(menuId);
+    const menu = (await Menu.findById(menuId)) as HydratedDocument<IMenu>;
 
     if (!menu) {
       return res.sendStatus(404).send({ error: 'This menu not found!' });
@@ -120,12 +126,17 @@ menusRouter.delete('/:id', auth, async (req, res, next) => {
     }
 
     const image = menu.image;
+    const qrCodeImage = menu.qrCodeImage;
 
     await Category.deleteMany({ menu: menu._id });
     await menu.deleteOne();
 
     if (image) {
       await deletePrevImage(image);
+    }
+
+    if (qrCodeImage) {
+      await deletePrevImage(qrCodeImage);
     }
 
     return res.sendStatus(204);
